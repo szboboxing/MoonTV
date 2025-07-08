@@ -4,23 +4,11 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
+import { DoubanItem, DoubanResult } from '@/lib/types';
+
 import DemoCard from '@/components/DemoCard';
 import DoubanCardSkeleton from '@/components/DoubanCardSkeleton';
 import PageLayout from '@/components/PageLayout';
-
-// 定义豆瓣数据项类型
-interface DoubanItem {
-  title: string;
-  poster: string;
-  rate?: string;
-}
-
-// 定义豆瓣响应类型
-interface DoubanResponse {
-  code: number;
-  message: string;
-  list: DoubanItem[];
-}
 
 function DoubanPageClient() {
   const searchParams = useSearchParams();
@@ -65,7 +53,7 @@ function DoubanPageClient() {
           throw new Error('获取豆瓣数据失败');
         }
 
-        const data: DoubanResponse = await response.json();
+        const data: DoubanResult = await response.json();
 
         if (data.code === 200) {
           setDoubanData(data.list);
@@ -100,7 +88,7 @@ function DoubanPageClient() {
             throw new Error('获取豆瓣数据失败');
           }
 
-          const data: DoubanResponse = await response.json();
+          const data: DoubanResult = await response.json();
 
           if (data.code === 200) {
             setDoubanData((prev) => [...prev, ...data.list]);
@@ -201,7 +189,7 @@ function DoubanPageClient() {
           ) : (
             <>
               {/* 内容网格 */}
-              <div className='grid grid-cols-3 gap-x-2 gap-y-12 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))] sm:gap-x-8 sm:gap-y-20 sm:px-4'>
+              <div className='grid grid-cols-3 gap-x-2 gap-y-12 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))] sm:gap-x-8 sm:gap-y-20'>
                 {loading
                   ? // 显示骨架屏
                     skeletonData.map((index) => (
@@ -211,9 +199,11 @@ function DoubanPageClient() {
                     doubanData.map((item, index) => (
                       <div key={`${item.title}-${index}`} className='w-full'>
                         <DemoCard
+                          id={item.id}
                           title={item.title}
                           poster={item.poster}
                           rate={item.rate}
+                          type={type || 'movie'}
                         />
                       </div>
                     ))}

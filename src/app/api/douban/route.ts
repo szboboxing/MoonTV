@@ -1,21 +1,11 @@
 import { NextResponse } from 'next/server';
 
 import { getCacheTime } from '@/lib/config';
-
-interface DoubanItem {
-  title: string;
-  poster: string;
-  rate: string;
-}
-
-interface DoubanResponse {
-  code: number;
-  message: string;
-  list: DoubanItem[];
-}
+import { DoubanItem, DoubanResult } from '@/lib/types';
 
 interface DoubanApiResponse {
   subjects: Array<{
+    id: string;
     title: string;
     cover: string;
     rate: string;
@@ -53,6 +43,8 @@ async function fetchDoubanData(url: string): Promise<DoubanApiResponse> {
     throw error;
   }
 }
+
+export const runtime = 'edge';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -104,12 +96,13 @@ export async function GET(request: Request) {
 
     // 转换数据格式
     const list: DoubanItem[] = doubanData.subjects.map((item) => ({
+      id: item.id,
       title: item.title,
       poster: item.cover,
       rate: item.rate,
     }));
 
-    const response: DoubanResponse = {
+    const response: DoubanResult = {
       code: 200,
       message: '获取成功',
       list: list,
@@ -158,28 +151,30 @@ function handleTop250(pageStart: number) {
       // 获取 HTML 内容
       const html = await fetchResponse.text();
 
-      // 使用正则表达式提取电影信息
+      // 通过正则同时捕获影片 id、标题、封面以及评分
       const moviePattern =
-        /<div class="item">[\s\S]*?<img[^>]+alt="([^"]+)"[^>]*src="([^"]+)"[\s\S]*?<span class="rating_num"[^>]*>([^<]+)<\/span>[\s\S]*?<\/div>/g;
+        /<div class="item">[\s\S]*?<a[^>]+href="https?:\/\/movie\.douban\.com\/subject\/(\d+)\/"[\s\S]*?<img[^>]+alt="([^"]+)"[^>]*src="([^"]+)"[\s\S]*?<span class="rating_num"[^>]*>([^<]*)<\/span>[\s\S]*?<\/div>/g;
       const movies: DoubanItem[] = [];
       let match;
 
       while ((match = moviePattern.exec(html)) !== null) {
-        const title = match[1];
-        const cover = match[2];
-        const rate = match[3] || '';
+        const id = match[1];
+        const title = match[2];
+        const cover = match[3];
+        const rate = match[4] || '';
 
         // 处理图片 URL，确保使用 HTTPS
         const processedCover = cover.replace(/^http:/, 'https:');
 
         movies.push({
+          id: id,
           title: title,
           poster: processedCover,
           rate: rate,
         });
       }
 
-      const apiResponse: DoubanResponse = {
+      const apiResponse: DoubanResult = {
         code: 200,
         message: '获取成功',
         list: movies,
